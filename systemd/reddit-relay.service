@@ -1,0 +1,14 @@
+[Unit]
+Description=reddit-relay: yt-dlp media relay service for starbottyyay (local)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Downloads/reddit-relay
+ExecStart=%h/Downloads/reddit-relay/venv/bin/python %h/Downloads/reddit-relay/app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

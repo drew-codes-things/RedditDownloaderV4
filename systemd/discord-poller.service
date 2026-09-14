@@ -1,0 +1,14 @@
+[Unit]
+Description=discord-poller: forwards RELAY: Discord messages to local reddit-relay
+After=network-online.target reddit-relay.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/discord-poller
+ExecStart=%h/discord-poller/venv/bin/python %h/discord-poller/poller.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

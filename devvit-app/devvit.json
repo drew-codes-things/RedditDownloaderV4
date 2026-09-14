@@ -1,0 +1,61 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "starbottyyay",
+  "post": {
+    "entrypoints": {
+      "default": {
+        "entry": "splash.html"
+      },
+      "game": {
+        "entry": "game.html"
+      }
+    }
+  },
+  "server": {},
+  "permissions": {
+    "http": {
+      "enable": true,
+      "domains": [
+        "discord.com"
+      ]
+    }
+  },
+  "settings": {
+    "global": {
+      "discordWebhookUrl": {
+        "type": "string",
+        "label": "Discord webhook URL",
+        "helpText": "Webhook that receives fetched media links, e.g. https://discord.com/api/webhooks/{id}/{token}",
+        "isSecret": true
+      }
+    }
+  },
+  "menu": {
+    "items": [
+      {
+        "label": "[starbottyyay] New Post",
+        "description": "Create a new starbottyyay post.",
+        "location": "subreddit",
+        "endpoint": "/internal/on/menu/new-post"
+      },
+      {
+        "label": "[starbottyyay] Fetch Media to Server",
+        "description": "Search this subreddit and relay matching image/gif/video links to your server.",
+        "location": "subreddit",
+        "endpoint": "/internal/on/menu/fetch-media"
+      }
+    ]
+  },
+  "forms": {
+    "fetchMediaForm": "/internal/on/form/fetch-media"
+  },
+  "triggers": {
+    "onAppInstall": "/internal/on/app/install"
+  },
+  "scripts": {
+    "dev": "npm run watch"
+  },
+  "dev": {
+    "subreddit": "starbottyyay_dev"
+  }
+}

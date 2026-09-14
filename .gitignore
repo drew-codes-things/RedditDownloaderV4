@@ -1,0 +1,13 @@
+node_modules/
+dist/
+public/*.js
+public/*.js.map
+.devvit/
+
+venv/
+__pycache__/
+*.pyc
+
+.env
+downloads/
+last_message_id.txt
