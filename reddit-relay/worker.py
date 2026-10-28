@@ -13,6 +13,8 @@ logger = logging.getLogger("reddit_relay.worker")
 
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "/downloads")
 MAX_CONCURRENT_DOWNLOADS = int(os.getenv("MAX_CONCURRENT_DOWNLOADS", "4"))
+MAX_FINISHED_JOBS = 1000
+FINISHED_STATUSES = ("done", "error")
 
 _DIRECT_IMAGE_HOSTS = {"preview.redd.it", "i.redd.it", "external-preview.redd.it"}
 
@@ -76,9 +78,19 @@ def _run_job(job_id):
             job["error"] = str(err)
 
 
+def _prune_finished_jobs():
+    finished = [job for job in _jobs.values() if job["status"] in FINISHED_STATUSES]
+    excess = len(finished) - MAX_FINISHED_JOBS
+    if excess <= 0:
+        return
+    for job in sorted(finished, key=lambda j: j["finishedAt"])[:excess]:
+        del _jobs[job["id"]]
+
+
 def enqueue(url, subreddit=None, post_id=None):
     job_id = uuid.uuid4().hex
     with _jobs_lock:
+        _prune_finished_jobs()
         _jobs[job_id] = {
             "id": job_id,
             "url": url,

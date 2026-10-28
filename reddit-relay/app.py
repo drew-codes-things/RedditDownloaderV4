@@ -9,7 +9,7 @@ from flask import Flask, jsonify, request
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-import worker  # noqa: E402
+import worker
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("reddit_relay.app")

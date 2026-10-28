@@ -19,6 +19,7 @@ logger = logging.getLogger("discord_poller")
 BOT_TOKEN = (os.getenv("BOT_TOKEN") or "").strip()
 CHANNEL_ID = (os.getenv("CHANNEL_ID") or "").strip()
 RELAY_API_TOKEN = (os.getenv("RELAY_API_TOKEN") or "").strip()
+RELAY_WEBHOOK_ID = (os.getenv("RELAY_WEBHOOK_ID") or "").strip()
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is not set - refusing to start")
@@ -77,6 +78,8 @@ def forward_to_relay(items: list[dict]) -> None:
     response = requests.post(
         RELAY_JOBS_URL, headers=RELAY_HEADERS, json={"items": items}, timeout=15
     )
+    if response.status_code >= 500:
+        response.raise_for_status()
     if not response.ok:
         logger.error(
             "reddit-relay rejected items: HTTP %d %s", response.status_code, response.text
@@ -91,9 +94,19 @@ def forward_to_relay(items: list[dict]) -> None:
     )
 
 
+def is_from_relay_webhook(message: dict) -> bool:
+    webhook_id = message.get("webhook_id")
+    if not webhook_id:
+        return False
+    return not RELAY_WEBHOOK_ID or webhook_id == RELAY_WEBHOOK_ID
+
+
 def process_message(message: dict) -> None:
     content = message.get("content", "")
     if not content.startswith(RELAY_MESSAGE_PREFIX):
+        return
+    if not is_from_relay_webhook(message):
+        logger.warning("message %s: ignoring RELAY payload not sent by the relay webhook", message["id"])
         return
 
     try:

@@ -105,6 +105,8 @@ cp .env.example .env
 
 Edit `.env` with your bot's `BOT_TOKEN` and the `CHANNEL_ID` from step 1.
 
+The poller only acts on `RELAY:` messages posted by a webhook, so people typing in the channel can't queue downloads. To pin it to your webhook specifically, also set `RELAY_WEBHOOK_ID` (the `{id}` part of the webhook URL).
+
 Run it directly to test:
 
 ```
