@@ -20,6 +20,7 @@ BOT_TOKEN = (os.getenv("BOT_TOKEN") or "").strip()
 CHANNEL_ID = (os.getenv("CHANNEL_ID") or "").strip()
 RELAY_API_TOKEN = (os.getenv("RELAY_API_TOKEN") or "").strip()
 RELAY_WEBHOOK_ID = (os.getenv("RELAY_WEBHOOK_ID") or "").strip()
+DELETE_RELAY_MESSAGES = (os.getenv("DELETE_RELAY_MESSAGES") or "true").strip().lower() != "false"
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is not set - refusing to start")
@@ -74,7 +75,7 @@ def fetch_new_messages(after_id: str | None) -> list[dict]:
     return sorted(response.json(), key=lambda msg: int(msg["id"]))
 
 
-def forward_to_relay(items: list[dict]) -> None:
+def forward_to_relay(items: list[dict]) -> bool:
     response = requests.post(
         RELAY_JOBS_URL, headers=RELAY_HEADERS, json={"items": items}, timeout=15
     )
@@ -84,7 +85,7 @@ def forward_to_relay(items: list[dict]) -> None:
         logger.error(
             "reddit-relay rejected items: HTTP %d %s", response.status_code, response.text
         )
-        return
+        return False
     body = response.json()
     logger.info(
         "forwarded %d item(s): queued=%d skipped=%d",
@@ -92,6 +93,28 @@ def forward_to_relay(items: list[dict]) -> None:
         len(body.get("queued", [])),
         len(body.get("skipped", [])),
     )
+    return True
+
+
+_warned_missing_permission = False
+
+
+def delete_relay_message(message_id: str) -> bool:
+    global _warned_missing_permission
+    url = f"{DISCORD_API_BASE}/channels/{CHANNEL_ID}/messages/{message_id}"
+    response = requests.delete(url, headers=DISCORD_HEADERS, timeout=15)
+    if response.status_code == 429:
+        time.sleep(float(response.json().get("retry_after", 1)))
+        response = requests.delete(url, headers=DISCORD_HEADERS, timeout=15)
+    if response.status_code in (204, 404):
+        return True
+    if response.status_code == 403:
+        if not _warned_missing_permission:
+            logger.warning("can't delete relay messages: give the bot Manage Messages in the relay channel")
+            _warned_missing_permission = True
+        return False
+    logger.error("message %s: delete failed with HTTP %d", message_id, response.status_code)
+    return False
 
 
 def is_from_relay_webhook(message: dict) -> bool:
@@ -119,7 +142,8 @@ def process_message(message: dict) -> None:
         logger.error("message %s: RELAY payload is not a non-empty array", message["id"])
         return
 
-    forward_to_relay(items)
+    if forward_to_relay(items) and DELETE_RELAY_MESSAGES:
+        delete_relay_message(message["id"])
 
 
 def poll_once() -> None:

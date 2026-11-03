@@ -107,6 +107,8 @@ Edit `.env` with your bot's `BOT_TOKEN` and the `CHANNEL_ID` from step 1.
 
 The poller only acts on `RELAY:` messages posted by a webhook, so people typing in the channel can't queue downloads. To pin it to your webhook specifically, also set `RELAY_WEBHOOK_ID` (the `{id}` part of the webhook URL).
 
+Once `reddit-relay` accepts a batch, the poller deletes that `RELAY:` message from Discord, so the channel doesn't fill up. This needs the bot to have **Manage Messages** in the channel; without it, a single warning is logged and messages are left in place. Set `DELETE_RELAY_MESSAGES=false` to keep them, for example if another tool reads the same channel.
+
 Run it directly to test:
 
 ```
