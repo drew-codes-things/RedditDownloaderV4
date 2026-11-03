@@ -10,7 +10,7 @@ So this app can't call your machine directly. Instead:
 
 1. **The Devvit app** scans the subreddit and posts the media links it finds to a **Discord webhook** (`discord.com` is on Reddit's allowlist).
 2. **`discord-poller`** - a small script that runs on your own machine, completely outside Devvit's sandbox - polls that Discord channel with a bot token, reads the links back out, and forwards them to `reddit-relay`.
-3. **`reddit-relay`** - a small local Flask service on your machine that takes those links and actually downloads the media with [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+3. **`reddit-relay`** - a small local Flask service on your machine that takes those links and downloads them: Reddit images directly, everything else with [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
 ```
 Reddit posts  →  Devvit app  →  Discord webhook  →  discord-poller  →  reddit-relay  →  yt-dlp  →  disk
@@ -120,8 +120,9 @@ Or install `systemd/discord-poller.service` the same way as above.
 - `devvit-app/src/server/media.ts` fetches posts from the target subreddit via Devvit's already-authenticated Reddit API and extracts a media URL from each: for Reddit-hosted video it uses the post's `hlsUrl`/`dashUrl`/`fallbackUrl` directly (not the post permalink - Reddit's public `.json` scrape API used by generic download tools is blocked outright for unauthenticated requests, so getting the real media URL from Devvit's own authenticated API sidesteps that entirely); for galleries and direct image/file links it uses those URLs as-is.
 - `devvit-app/src/server/relay.ts` batches those links into JSON, prefixes each batch with `RELAY:`, and posts them as Discord messages via the webhook (chunked to stay under Discord's 2000-character message limit, with retry-on-429 for Discord's rate limit).
 - `discord-poller/poller.py` polls `GET /channels/{id}/messages` with the bot token, looks for `RELAY:`-prefixed messages, parses the JSON, and `POST`s the items to `reddit-relay`'s `/jobs` endpoint. It tracks the last message ID it processed in `last_message_id.txt` so restarts don't reprocess old messages.
-- `reddit-relay/app.py` is a small bearer-token-authed Flask API; `/jobs` queues each URL, `worker.py` runs the actual downloads through yt-dlp in a thread pool.
-- `worker.py` sends `Accept: */*` specifically for Reddit's direct-image CDN hosts (`preview.redd.it`, `i.redd.it`) - by default, Reddit's CDN does content negotiation on the `Accept` header and 307-redirects a browser-like request to a JS-only viewer page instead of serving the raw file. Video/audio hosts don't need this.
+- `reddit-relay/app.py` is a small bearer-token-authed Flask API; `/jobs` queues each URL, `worker.py` runs the actual downloads in a thread pool.
+- Images on Reddit's CDN (`preview.redd.it`, `i.redd.it`, `external-preview.redd.it`) are fetched with a plain HTTP request, not yt-dlp: yt-dlp follows Reddit's redirect to a `reddit.com/media?url=` viewer page and rejects it as an unsupported URL. A `preview.redd.it` link is tried at `i.redd.it` first, which is the full-size original and has no expiring signature, then as given. Each file is written to `.part` and renamed when complete. Videos and post links still go through yt-dlp.
+- Reddit's signed video links (`HLSPlaylist.m3u8?a=...`) expire after a while, and deleted images return 404, so very old relay messages can fail even though new ones download fine.
 - Output filenames are prefixed with the Reddit post ID. This matters specifically for video: every Reddit video's HLS manifest is named identically (`HLSPlaylist.m3u8`), so without a unique prefix, downloading a second video into the same subreddit folder would silently overwrite (or get skipped in place of) the first.
 
 ## Security notes
