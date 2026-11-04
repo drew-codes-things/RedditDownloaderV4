@@ -85,6 +85,7 @@ cp .env.example .env
 Edit `.env`:
 - `RELAY_API_TOKEN` - make up a long random string; this authenticates requests from `discord-poller`
 - `DOWNLOAD_DIR` - where downloaded media should land
+- `PORT` (default `5000`) and `BIND_HOST` (default `127.0.0.1`). The relay listens on loopback only, so nothing else on the network can reach it; set `BIND_HOST=0.0.0.0` only if `discord-poller` runs on a different machine.
 
 Run it directly to test:
 
