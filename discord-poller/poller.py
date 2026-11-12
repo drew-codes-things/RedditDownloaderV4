@@ -33,6 +33,7 @@ DISCORD_API_BASE = "https://discord.com/api/v10"
 RELAY_JOBS_URL = os.getenv("RELAY_JOBS_URL", "http://localhost:5000/jobs")
 POLL_INTERVAL_SECONDS = int(os.getenv("POLL_INTERVAL_SECONDS", "10"))
 RELAY_MESSAGE_PREFIX = "RELAY:"
+RELAY_RETRY_LATER_STATUSES = frozenset({401, 403, 429})
 STATE_FILE = os.path.join(BASE_DIR, "last_message_id.txt")
 
 DISCORD_HEADERS = {"Authorization": f"Bot {BOT_TOKEN}"}
@@ -79,6 +80,12 @@ def forward_to_relay(items: list[dict]) -> bool:
     response = requests.post(
         RELAY_JOBS_URL, headers=RELAY_HEADERS, json={"items": items}, timeout=15
     )
+    if response.status_code in RELAY_RETRY_LATER_STATUSES:
+        logger.error(
+            "reddit-relay refused the batch with HTTP %d; keeping it to retry (check RELAY_API_TOKEN)",
+            response.status_code,
+        )
+        response.raise_for_status()
     if response.status_code >= 500:
         response.raise_for_status()
     if not response.ok:
