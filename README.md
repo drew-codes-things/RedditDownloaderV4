@@ -132,6 +132,7 @@ Or install `systemd/discord-poller.service` the same way as above.
 
 - Every secret (`RELAY_API_TOKEN`, `BOT_TOKEN`, the webhook URL) lives in a gitignored `.env` file - never commit these, and use `.env.example` as the template when setting up a fresh clone.
 - If a token or webhook URL is ever pasted into a chat log, terminal history, or committed by mistake, rotate it - webhook URLs can be regenerated from the channel's Integrations settings, and bot tokens from the Developer Portal's Bot tab.
+- `reddit-relay` only downloads `http`/`https` links whose host resolves to a public address. A link to a loopback, private-network or link-local address (for example a Reddit post that points at `http://192.168.1.1/...`) is marked as an error instead of being fetched from inside your network. Redirects are followed by the downloader and are not re-checked.
 - `reddit-relay`'s Flask server is the built-in development server, not hardened for production - this is intended for personal, local use behind your own machine, not as an internet-facing service.
 
 ## License

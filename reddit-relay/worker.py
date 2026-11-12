@@ -1,7 +1,9 @@
+import ipaddress
 import logging
 import os
 import re
 import shutil
+import socket
 import threading
 import time
 import uuid
@@ -22,6 +24,26 @@ _DIRECT_IMAGE_HOSTS = {"preview.redd.it", "i.redd.it", "external-preview.redd.it
 IMAGE_TIMEOUT_SECONDS = 60
 IMAGE_CHUNK_BYTES = 64 * 1024
 IMAGE_HEADERS = {"User-Agent": "reddit-relay/1.0", "Accept": "image/*,*/*"}
+ALLOWED_URL_SCHEMES = ("http", "https")
+
+
+def _resolved_addresses(hostname):
+    try:
+        return {info[4][0] for info in socket.getaddrinfo(hostname, None)}
+    except (OSError, UnicodeError):
+        return set()
+
+
+def is_public_http_url(url):
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+    except ValueError:
+        return False
+    if parsed.scheme not in ALLOWED_URL_SCHEMES or not hostname:
+        return False
+    addresses = _resolved_addresses(hostname)
+    return bool(addresses) and all(ipaddress.ip_address(address).is_global for address in addresses)
 
 
 def _is_direct_image_url(url):
@@ -120,6 +142,8 @@ def _run_job(job_id):
         job["startedAt"] = time.time()
 
     try:
+        if not is_public_http_url(job["url"]):
+            raise ValueError("refusing to download: not a public http(s) address")
         filename = _download(job)
         with _jobs_lock:
             job["status"] = "done"
