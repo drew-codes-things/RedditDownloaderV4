@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/"
+    directory: "/devvit-app"
     schedule:
       interval: "cron"
       cronjob: "0 17 * * 1,2"
