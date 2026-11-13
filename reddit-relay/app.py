@@ -22,26 +22,6 @@ MAX_ITEMS_PER_REQUEST = int(os.getenv("MAX_ITEMS_PER_REQUEST", "200"))
 
 app = Flask(__name__)
 
-CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-}
-
-
-@app.after_request
-def add_cors_headers(response):
-    for header, value in CORS_HEADERS.items():
-        response.headers[header] = value
-    return response
-
-
-@app.route("/jobs", methods=["OPTIONS"])
-@app.route("/jobs/<job_id>", methods=["OPTIONS"])
-def cors_preflight(job_id=None):
-    return "", 204
-
-
 def requires_bearer_token(view_func):
     @wraps(view_func)
     def wrapped(*args, **kwargs):
