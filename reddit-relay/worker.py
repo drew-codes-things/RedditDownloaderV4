@@ -2,14 +2,14 @@ import ipaddress
 import logging
 import os
 import re
-import shutil
 import socket
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse
-from urllib.request import Request, urlopen
+from urllib.error import URLError
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 import yt_dlp
 
@@ -25,6 +25,18 @@ IMAGE_TIMEOUT_SECONDS = 60
 IMAGE_CHUNK_BYTES = 64 * 1024
 IMAGE_HEADERS = {"User-Agent": "reddit-relay/1.0", "Accept": "image/*,*/*"}
 ALLOWED_URL_SCHEMES = ("http", "https")
+BYTES_PER_MB = 1024 * 1024
+MAX_DOWNLOAD_BYTES = int(os.getenv("MAX_DOWNLOAD_MB", "1024")) * BYTES_PER_MB
+MAX_REDIRECTS = 5
+YTDLP_HOSTS = frozenset({
+    "v.redd.it",
+    "reddit.com",
+    "www.reddit.com",
+    "old.reddit.com",
+    "imgur.com",
+    "i.imgur.com",
+})
+DIRECT_MEDIA_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".mp3", ".mov")
 
 
 def _resolved_addresses(hostname):
@@ -48,6 +60,37 @@ def is_public_http_url(url):
 
 def _is_direct_image_url(url):
     return urlparse(url).hostname in _DIRECT_IMAGE_HOSTS
+
+
+def _is_ytdlp_host(url):
+    return urlparse(url).hostname in YTDLP_HOSTS
+
+
+def _is_direct_media_link(url):
+    return urlparse(url).path.lower().endswith(DIRECT_MEDIA_EXTENSIONS)
+
+
+class PublicOnlyRedirectHandler(HTTPRedirectHandler):
+    max_redirections = MAX_REDIRECTS
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not is_public_http_url(newurl):
+            raise URLError(f"refusing to follow a redirect to a non-public address: {newurl}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _open_public_url(url):
+    opener = build_opener(PublicOnlyRedirectHandler)
+    return opener.open(Request(url, headers=IMAGE_HEADERS), timeout=IMAGE_TIMEOUT_SECONDS)
+
+
+def _copy_capped(response, out):
+    written = 0
+    while chunk := response.read(IMAGE_CHUNK_BYTES):
+        written += len(chunk)
+        if written > MAX_DOWNLOAD_BYTES:
+            raise OSError(f"download is larger than {MAX_DOWNLOAD_BYTES // BYTES_PER_MB} MB")
+        out.write(chunk)
 
 
 _executor = ThreadPoolExecutor(max_workers=MAX_CONCURRENT_DOWNLOADS)
@@ -80,6 +123,7 @@ def _make_ydl_opts(subreddit, post_id):
         "noprogress": True,
         "merge_output_format": "mp4",
         "ignoreerrors": False,
+        "max_filesize": MAX_DOWNLOAD_BYTES,
     }
 
 
@@ -112,9 +156,8 @@ def _download_direct_image(url, target):
 def _fetch_to_file(url, target):
     part_path = target + ".part"
     try:
-        with urlopen(Request(url, headers=IMAGE_HEADERS), timeout=IMAGE_TIMEOUT_SECONDS) as response, \
-                open(part_path, "wb") as out:
-            shutil.copyfileobj(response, out, IMAGE_CHUNK_BYTES)
+        with _open_public_url(url) as response, open(part_path, "wb") as out:
+            _copy_capped(response, out)
         os.replace(part_path, target)
     except BaseException:
         if os.path.exists(part_path):
@@ -130,9 +173,14 @@ def _download_with_ytdlp(job):
 
 
 def _download(job):
-    if _is_direct_image_url(job["url"]):
-        return _download_direct_image(job["url"], _direct_image_path(job["subreddit"], job["url"], job["postId"]))
-    return _download_with_ytdlp(job)
+    url = job["url"]
+    if _is_direct_image_url(url):
+        return _download_direct_image(url, _direct_image_path(job["subreddit"], url, job["postId"]))
+    if _is_ytdlp_host(url):
+        return _download_with_ytdlp(job)
+    if _is_direct_media_link(url):
+        return _download_direct_image(url, _direct_image_path(job["subreddit"], url, job["postId"]))
+    raise ValueError(f"refusing to download: {urlparse(url).hostname} is not a supported media host")
 
 
 def _run_job(job_id):

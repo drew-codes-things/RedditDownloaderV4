@@ -85,6 +85,7 @@ cp .env.example .env
 Edit `.env`:
 - `RELAY_API_TOKEN` - make up a long random string; this authenticates requests from `discord-poller`
 - `DOWNLOAD_DIR` - where downloaded media should land
+- `MAX_DOWNLOAD_MB` (default `1024`) - largest file the relay will download; bigger files are dropped and the job is marked as an error
 - `PORT` (default `5000`) and `BIND_HOST` (default `127.0.0.1`). The relay listens on loopback only, so nothing else on the network can reach it; set `BIND_HOST=0.0.0.0` only if `discord-poller` runs on a different machine.
 
 Run it directly to test:
@@ -132,7 +133,7 @@ Or install `systemd/discord-poller.service` the same way as above.
 
 - Every secret (`RELAY_API_TOKEN`, `BOT_TOKEN`, the webhook URL) lives in a gitignored `.env` file - never commit these, and use `.env.example` as the template when setting up a fresh clone.
 - If a token or webhook URL is ever pasted into a chat log, terminal history, or committed by mistake, rotate it - webhook URLs can be regenerated from the channel's Integrations settings, and bot tokens from the Developer Portal's Bot tab.
-- `reddit-relay` only downloads `http`/`https` links whose host resolves to a public address. A link to a loopback, private-network or link-local address (for example a Reddit post that points at `http://192.168.1.1/...`) is marked as an error instead of being fetched from inside your network. Redirects are followed by the downloader and are not re-checked.
+- `reddit-relay` only downloads `http`/`https` links whose host resolves to a public address. A link to a loopback, private-network or link-local address (for example a Reddit post that points at `http://192.168.1.1/...`) is marked as an error instead of being fetched from inside your network. Every redirect of a direct download is checked the same way, so a public link cannot bounce the relay to a private address. yt-dlp is only used for Reddit (`v.redd.it`, `reddit.com`) and Imgur links; any other host is downloaded only when the link names a media file (`.jpg`, `.png`, `.gif`, `.webp`, `.mp4`, `.mp3`, `.mov`), with the same per-hop check, and anything else is refused.
 - `reddit-relay`'s Flask server is the built-in development server, not hardened for production - this is intended for personal, local use behind your own machine, not as an internet-facing service.
 
 ## License
