@@ -105,7 +105,9 @@ def _safe_path_segment(value, fallback):
     if not value:
         return fallback
     cleaned = _SAFE_SEGMENT.sub("_", value).strip("_")
-    return cleaned or fallback
+    if not cleaned.strip("."):
+        return fallback
+    return cleaned
 
 
 def _subreddit_dir(subreddit):
