@@ -105,7 +105,10 @@ python3 -m venv venv
 cp .env.example .env
 ```
 
-Edit `.env` with your bot's `BOT_TOKEN` and the `CHANNEL_ID` from step 1.
+Edit `.env`:
+- `BOT_TOKEN` and `CHANNEL_ID` from step 1
+- `RELAY_API_TOKEN` - the same value as in `reddit-relay/.env`. If you leave it out here, the poller reads it from the relay's `.env` at `REDDIT_RELAY_ENV_PATH` (default `~/Downloads/reddit-relay/.env`), so set `REDDIT_RELAY_ENV_PATH` when the relay lives anywhere else, for example `../reddit-relay/.env` in a clone of this repo. Without the token the poller refuses to start.
+- `RELAY_JOBS_URL` (default `http://localhost:5000/jobs`) only if the relay runs on another port or machine
 
 The poller only acts on `RELAY:` messages posted by a webhook, so people typing in the channel can't queue downloads. To pin it to your webhook specifically, also set `RELAY_WEBHOOK_ID` (the `{id}` part of the webhook URL).
 
@@ -118,6 +121,8 @@ Run it directly to test:
 ```
 
 Or install `systemd/discord-poller.service` the same way as above.
+
+The two unit files assume `~/Downloads/reddit-relay` and `~/discord-poller`. If you run the services from a clone of this repo, change `WorkingDirectory` and both paths in `ExecStart` in each unit to the clone's `reddit-relay` and `discord-poller` folders before copying them.
 
 ## How it works
 
