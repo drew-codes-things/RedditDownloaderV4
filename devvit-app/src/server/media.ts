@@ -2,7 +2,8 @@ import type {Post} from '@devvit/reddit'
 import {reddit} from '@devvit/web/server'
 import type {MediaFetchSort, RelayMediaItem} from '../shared/api.ts'
 
-const DIRECT_MEDIA_EXTENSION_PATTERN = /\.(jpe?g|png|gif|gifv|webp|mp4|mp3|mov)$/i
+const DIRECT_MEDIA_EXTENSION_PATTERN =
+  /\.(jpe?g|png|gif|gifv|webp|mp4|mp3|mov)$/i
 
 const PAGE_SIZE = 100
 

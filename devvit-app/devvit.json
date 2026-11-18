@@ -15,9 +15,7 @@
   "permissions": {
     "http": {
       "enable": true,
-      "domains": [
-        "discord.com"
-      ]
+      "domains": ["discord.com"]
     }
   },
   "settings": {

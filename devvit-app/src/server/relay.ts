@@ -71,7 +71,9 @@ async function postToWebhook(
   return false
 }
 
-export async function relayMediaItems(items: RelayMediaItem[]): Promise<number> {
+export async function relayMediaItems(
+  items: RelayMediaItem[],
+): Promise<number> {
   const webhookUrl = await settings.get<string>('discordWebhookUrl')
   if (!webhookUrl) {
     console.error('discordWebhookUrl is not configured; cannot relay media')
