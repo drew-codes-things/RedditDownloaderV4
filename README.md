@@ -83,7 +83,7 @@ cp .env.example .env
 ```
 
 Edit `.env`:
-- `RELAY_API_TOKEN` - make up a long random string; this authenticates requests from `discord-poller`
+- `RELAY_API_TOKEN` - make up a long random string, for example the output of `python3 -c "import secrets; print(secrets.token_urlsafe(32))"`; this authenticates requests from `discord-poller`. The relay refuses to start when it is missing, shorter than 32 characters, or still the `.env.example` placeholder
 - `DOWNLOAD_DIR` - where downloaded media should land
 - `MAX_DOWNLOAD_MB` (default `1024`) - largest file the relay will download; bigger files are dropped and the job is marked as an error
 - `PORT` (default `5000`) and `BIND_HOST` (default `127.0.0.1`). The relay listens on loopback only, so nothing else on the network can reach it; set `BIND_HOST=0.0.0.0` only if `discord-poller` runs on a different machine.

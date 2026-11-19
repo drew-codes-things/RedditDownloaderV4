@@ -14,9 +14,24 @@ import worker
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("reddit_relay.app")
 
-RELAY_API_TOKEN = (os.getenv("RELAY_API_TOKEN") or "").strip()
-if not RELAY_API_TOKEN:
-    raise RuntimeError("RELAY_API_TOKEN is not set - refusing to start without an API token")
+MIN_RELAY_API_TOKEN_LENGTH = 32
+EXAMPLE_RELAY_API_TOKEN = "change-me-to-a-long-random-string"
+
+
+def checked_relay_token(raw_token):
+    token = (raw_token or "").strip()
+    if not token:
+        raise RuntimeError("RELAY_API_TOKEN is not set - refusing to start without an API token")
+    if token.lower() == EXAMPLE_RELAY_API_TOKEN:
+        raise RuntimeError("RELAY_API_TOKEN is still the placeholder from .env.example - refusing to start; "
+                           "set it to a long random string (see the README)")
+    if len(token) < MIN_RELAY_API_TOKEN_LENGTH:
+        raise RuntimeError(f"RELAY_API_TOKEN is too short - refusing to start; use at least "
+                           f"{MIN_RELAY_API_TOKEN_LENGTH} random characters (see the README)")
+    return token
+
+
+RELAY_API_TOKEN = checked_relay_token(os.getenv("RELAY_API_TOKEN"))
 
 MAX_ITEMS_PER_REQUEST = int(os.getenv("MAX_ITEMS_PER_REQUEST", "200"))
 
