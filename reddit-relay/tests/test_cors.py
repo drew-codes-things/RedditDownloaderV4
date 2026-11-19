@@ -1,6 +1,6 @@
 import os
 
-os.environ.setdefault("RELAY_API_TOKEN", "test-relay-token")
+os.environ.setdefault("RELAY_API_TOKEN", "test-relay-token-long-enough-for-the-minimum")
 
 import app
 
